@@ -76,7 +76,7 @@
     });
   }
 
-  // Product page: swatch interaction + URL param
+  // Product page: swatch interaction
   var swatches = document.querySelectorAll('.swatch');
   swatches.forEach(function (s) {
     s.addEventListener('click', function () {
@@ -84,6 +84,82 @@
       group.querySelectorAll('.swatch').forEach(function (x) { x.classList.remove('is-active'); });
       s.classList.add('is-active');
     });
+  });
+
+  // Product page: gallery — click thumbnail to swap main image
+  var galleryMain = document.getElementById('galleryMain');
+  var thumbs = document.querySelectorAll('#gallery .thumb');
+  if (galleryMain && thumbs.length) {
+    thumbs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var src = t.getAttribute('data-img');
+        var fallback = t.getAttribute('data-fallback');
+        if (!src) return;
+        thumbs.forEach(function (x) { x.classList.remove('is-active'); });
+        t.classList.add('is-active');
+        galleryMain.style.opacity = '0';
+        var probe = new Image();
+        probe.onload = function () {
+          galleryMain.src = src;
+          galleryMain.style.opacity = '1';
+        };
+        probe.onerror = function () {
+          galleryMain.src = fallback || src;
+          galleryMain.style.opacity = '1';
+        };
+        probe.src = src;
+      });
+    });
+    galleryMain.style.transition = 'opacity .25s ease';
+  }
+
+  // Product page: load product from URL ?p=medina|aicha|atlas
+  var products = {
+    medina: { title: 'Sac à dos « Médina »', titleAr: 'حقيبة الظهر «المدينة»', priceNow: '490 DH', priceOld: '690 DH', folder: 'medina', fallback: 'https://images.unsplash.com/photo-1622560480654-d96214fdc887?auto=format&fit=crop&w=1200&q=85' },
+    aicha:  { title: 'Sac à main « Aïcha »', titleAr: 'حقيبة اليد «عائشة»', priceNow: '450 DH', priceOld: '650 DH', folder: 'aicha', fallback: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1200&q=85' },
+    atlas:  { title: 'Sac de voyage « Atlas »', titleAr: 'حقيبة السفر «أطلس»', priceNow: '890 DH', priceOld: '1 190 DH', folder: 'atlas', fallback: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=1200&q=85' }
+  };
+  var qs = new URLSearchParams(window.location.search);
+  var p = qs.get('p');
+  if (p && products[p]) {
+    var prod = products[p];
+    var lang = document.documentElement.getAttribute('lang') || 'fr';
+    var titleEl = document.querySelector('.product-info h1');
+    if (titleEl) titleEl.textContent = lang === 'ar' ? prod.titleAr : prod.title;
+    var priceEl = document.querySelector('.product-info .price');
+    var priceOldEl = document.querySelector('.product-info .price-old');
+    if (priceEl) priceEl.textContent = prod.priceNow;
+    if (priceOldEl) priceOldEl.textContent = prod.priceOld;
+    // Swap gallery image paths to the right folder
+    if (galleryMain) {
+      galleryMain.src = 'assets/img/products/' + prod.folder + '/1-main.jpg'.replace('assets/', '../assets/').replace('../../', '../');
+      // Cleaner: rebuild
+      galleryMain.src = '../assets/img/products/' + prod.folder + '/1-main.jpg';
+      galleryMain.onerror = function () { galleryMain.onerror = null; galleryMain.src = prod.fallback; };
+    }
+    thumbs.forEach(function (t, i) {
+      var newSrc = '../assets/img/products/' + prod.folder + '/' + (i + 1) + '-' + ['main','back','detail','worn'][i] + '.jpg';
+      t.setAttribute('data-img', newSrc);
+      t.setAttribute('data-fallback', prod.fallback);
+      var img = t.querySelector('img');
+      if (img) {
+        img.src = newSrc;
+        img.onerror = function () { img.onerror = null; img.src = prod.fallback; };
+      }
+    });
+    // Update page <title>
+    document.title = (lang === 'ar' ? prod.titleAr : prod.title) + ' — NOOR FÈS';
+  }
+
+  // Re-apply on language change for product page dynamic title
+  window.addEventListener('langchange', function (e) {
+    if (p && products[p]) {
+      var prod = products[p];
+      var lang = e.detail.lang;
+      var titleEl = document.querySelector('.product-info h1');
+      if (titleEl) titleEl.textContent = lang === 'ar' ? prod.titleAr : prod.title;
+      document.title = (lang === 'ar' ? prod.titleAr : prod.title) + ' — NOOR FÈS';
+    }
   });
 
   // Reveal-on-scroll
